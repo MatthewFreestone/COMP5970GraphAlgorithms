@@ -1,0 +1,5 @@
+__pycache__/
+*.zip
+__MACOSX__/
+*.pyc
+*.pyo

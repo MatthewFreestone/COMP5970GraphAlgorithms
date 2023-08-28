@@ -1,0 +1,33 @@
+Recurrsive DFS
+DFS called with a
+DFS called with b
+DFS called with d
+DFS called with e
+DFS called with c
+
+DFS with visiting on stack push
+DFS popped a
+DFS popped b
+DFS popped c
+DFS popped d
+DFS popped e
+DFS with visiting on stack pop
+DFS popped a
+DFS popped b
+DFS popped d
+DFS popped e
+DFS popped c
+
+BFS with visiting on queue enquque
+BFS popped a
+BFS popped d
+BFS popped c
+BFS popped b
+BFS popped e
+
+BFS with visiting on queue dequeue
+BFS popped a
+BFS popped d
+BFS popped c
+BFS popped b
+BFS popped e
