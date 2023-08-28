@@ -11,6 +11,7 @@ import argparse
 import chess
 import networkx as nx
 import pickle
+from collections import namedtuple, deque
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--graph1", help="file containing graph in adjacency list format for problem 1")
@@ -33,8 +34,23 @@ node names are (x,y) denoting locations in the maze
 outputs: prints path from start_node to end_node
 '''
 def maze(G, start_node: str, end_node: str):
-    print("output")
-
+    StackItem = namedtuple('StackItem', 'vertex path')
+    stack = []
+    stack.append(StackItem(start_node, path=tuple([start_node])))
+    while stack:
+        vertex, curr_path = stack.pop()
+        node = G.nodes[vertex]
+        if 'visited' in node:
+            continue
+        node['visited'] = True
+        for adj in G[vertex]:
+            new_path = curr_path+tuple([adj])
+            if adj == end_node:
+                print(', '.join(new_path))
+                return
+            new_item = StackItem(adj, path=new_path)
+            stack.append(new_item)
+    print("No path exists.")
 
 
 
@@ -56,6 +72,28 @@ if board.is_checkmate():
 outputs: prints move sequence to fastest possible checkmate
 '''
 def checkmate(G, start_node: str):
+    if chess.Board(start_node).is_checkmate():
+        print(G[start_node]['move'])
+
+    queue = deque()
+    queue.append(start_node)
+    while queue:
+        move = queue.popleft()
+        node = G.nodes[move]
+        if 'visited' in node:
+            continue
+        node['visited'] = True
+        for adj in G[move]:
+            if chess.Board(adj).is_checkmate():
+                curr = adj
+                moves = []
+                while curr:
+                    move = G.nodes[curr]['move']
+                    if move: moves.append(move)
+                    curr = G.nodes[curr]['parent']
+                print(', '.join(reversed(moves)))
+                return
+            queue.append(adj)
     print("output")
 
 
