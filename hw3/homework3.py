@@ -27,7 +27,8 @@ element in the vector representing the last leaf node at the deepest level, you 
 compute the index of the children of the node at position i as 2i+1 and 2i+2
 You cannot import Queue or any other package for this problem.
 '''
-HeapNode = namedtuple('HeapNode', 'key value') 
+HeapNode = namedtuple('HeapNode', 'key value')
+
 
 class IndexedPriorityQueue:
     def __init__(self):
@@ -45,10 +46,38 @@ class IndexedPriorityQueue:
     def popmin(self):
         to_yield = self.min_heap[0]
         key = to_yield.key
-        self.min_heap[0] = HeapNode(key, math.inf)
-        self.__heapify_down(key)
-        self.min_heap.pop()
         del self.index[key]
+        self.min_heap[0] = None
+        if len(self.index) == 0:
+            # heap is empty
+            return to_yield
+
+        i = 0
+        while i < len(self.min_heap):
+            l_child_idx, r_child_idx = 2*i+1, 2*i+2
+            lowest = None
+            next_i = None
+            if l_child_idx < len(self.min_heap) and self.min_heap[l_child_idx]:
+                lowest = self.min_heap[l_child_idx]
+                next_i = l_child_idx
+                # we had a left, see if right is better
+                if r_child_idx < len(self.min_heap) and self.min_heap[r_child_idx] and self.min_heap[r_child_idx].value < lowest.value:
+                    lowest = self.min_heap[r_child_idx]
+                    next_i = r_child_idx
+            # we didn't have left. Maybe we have a right
+            elif r_child_idx < len(self.min_heap) and self.min_heap[r_child_idx]:
+                    lowest = self.min_heap[r_child_idx]
+                    next_i = r_child_idx
+
+            # if there is no more switches to do            
+            if not lowest:
+                break
+
+            self.index[lowest.key] = i
+            self.min_heap[i] = lowest
+            # this is probably unnecessary
+            self.min_heap[next_i] = None 
+            i = next_i
         return to_yield
 
     def peek(self):
@@ -86,14 +115,14 @@ class IndexedPriorityQueue:
         # if we're heapify-ing down, we should check if either child is 
         # less than the value at the current node. If so, switch them and recurse
         l_child_idx, r_child_idx = curr_idx*2 + 1, curr_idx * 2 + 2
-        if l_child_idx < len(self.min_heap) and self.min_heap[l_child_idx].value < curr_value:
+        if l_child_idx < len(self.min_heap) and self.min_heap[l_child_idx] and self.min_heap[l_child_idx].value < curr_value:
             left_key = self.min_heap[l_child_idx].key
             self.index[key] = l_child_idx
             self.index[left_key] = curr_idx
             # isn't python nifty? 
             self.min_heap[l_child_idx], self.min_heap[curr_idx] = self.min_heap[curr_idx], self.min_heap[l_child_idx]
             self.__heapify_down(key)
-        elif r_child_idx < len(self.min_heap) and self.min_heap[r_child_idx].value < curr_value:
+        elif r_child_idx < len(self.min_heap) and self.min_heap[r_child_idx] and self.min_heap[r_child_idx].value < curr_value:
             right_key = self.min_heap[r_child_idx].key
             self.index[key] = r_child_idx
             self.index[right_key] = curr_idx
@@ -101,9 +130,9 @@ class IndexedPriorityQueue:
             self.min_heap[r_child_idx], self.min_heap[curr_idx] = self.min_heap[curr_idx], self.min_heap[r_child_idx]
             self.__heapify_down(key)
     def __len__(self):
-        return len(self.min_heap)
+        return len(self.index)
     def __bool__(self):
-        return bool(self.min_heap)
+        return bool(self.index)
     def __getitem__(self, key):
         # will throw key error if bad
         idx = self.index[key]
@@ -120,11 +149,15 @@ You should use the Indexed priority queue from problem 1
 def Dijkstras(G, s, t):
     ipq = IndexedPriorityQueue()
     finalized_dists = {}
+    parents = {}
     for node in G.nodes:
-        ipq.push(node, 1e9)
+        ipq.push(node, math.inf)
+        parents[node] = node
     ipq.decrease_key(s, 0)
     while (ipq):
         key, value = ipq.popmin()
+        if key == t:
+            break
         # finalized.add(key)
         finalized_dists[key] = value
         for neighbor in G.adj[key]:
@@ -134,7 +167,15 @@ def Dijkstras(G, s, t):
             possible_new_val = value + weight
             if possible_new_val < ipq[neighbor]:
                 ipq.decrease_key(neighbor, possible_new_val)
+                parents[neighbor] = key
+    order_to_end = []
+    curr = t
+    while (curr != s):
+        order_to_end.append(curr)
+        curr = parents[curr]
     print(finalized_dists)
+    print(parents)
+    print(order_to_end + [s])
         
 
     # your code here
