@@ -29,7 +29,6 @@ You cannot import Queue or any other package for this problem.
 '''
 HeapNode = namedtuple('HeapNode', 'key value')
 
-
 class IndexedPriorityQueue:
     def __init__(self):
         self.min_heap = []
@@ -44,40 +43,18 @@ class IndexedPriorityQueue:
         # your code here
 
     def popmin(self):
+        last_item = self.min_heap.pop()
+        if not self.min_heap:
+            del self.index[last_item.key]
+            return last_item
+        
         to_yield = self.min_heap[0]
-        key = to_yield.key
-        del self.index[key]
-        self.min_heap[0] = None
-        if len(self.index) == 0:
-            # heap is empty
-            return to_yield
+        self.min_heap[0] = last_item
+        self.index[last_item.key] = 0
 
-        i = 0
-        while i < len(self.min_heap):
-            l_child_idx, r_child_idx = 2*i+1, 2*i+2
-            lowest = None
-            next_i = None
-            if l_child_idx < len(self.min_heap) and self.min_heap[l_child_idx]:
-                lowest = self.min_heap[l_child_idx]
-                next_i = l_child_idx
-                # we had a left, see if right is better
-                if r_child_idx < len(self.min_heap) and self.min_heap[r_child_idx] and self.min_heap[r_child_idx].value < lowest.value:
-                    lowest = self.min_heap[r_child_idx]
-                    next_i = r_child_idx
-            # we didn't have left. Maybe we have a right
-            elif r_child_idx < len(self.min_heap) and self.min_heap[r_child_idx]:
-                    lowest = self.min_heap[r_child_idx]
-                    next_i = r_child_idx
+        self.__heapify_down(last_item.key)
 
-            # if there is no more switches to do            
-            if not lowest:
-                break
-
-            self.index[lowest.key] = i
-            self.min_heap[i] = lowest
-            # this is probably unnecessary
-            self.min_heap[next_i] = None 
-            i = next_i
+        del self.index[to_yield.key]
         return to_yield
 
     def peek(self):
@@ -93,46 +70,66 @@ class IndexedPriorityQueue:
     
     def __heapify_up(self, key):
         curr_idx = self.index[key]
-        curr_value = self.min_heap[curr_idx].value
+        curr = self.min_heap[curr_idx]
         # if we're heapify-ing up, we should check if the parent is 
-        # less than the value at the current node. If so, switch them and recurse
+        # less than the value at the current node. If so, move parent down
+        # continue until we can't move parent, then we place the curr at its destination
         
         # because of how we index, an odd number is a left child, and an even number is right child
-        # this changes either 2i+1 or 2i+2 into 2i
-        offset = (curr_idx % 2) - 2
-        parent_idx = (curr_idx + offset) // 2
-        if parent_idx >= 0 and curr_value < self.min_heap[parent_idx].value:
-            parent_key = self.min_heap[parent_idx].key
-            self.index[key] = parent_idx
-            self.index[parent_key] = curr_idx
-            # isn't python nifty? 
-            self.min_heap[parent_idx], self.min_heap[curr_idx] = self.min_heap[curr_idx], self.min_heap[parent_idx]
-            self.__heapify_up(key)
+        while curr_idx > 0:
+            # this changes either 2i+1 or 2i+2 into 2i
+            offset = (curr_idx % 2) - 2
+            parent_idx = (curr_idx + offset) // 2
+            parent = self.min_heap[parent_idx]
+
+            if curr.value < parent.value:
+                self.min_heap[curr_idx] = parent
+                self.index[parent.key] = curr_idx
+                curr_idx = parent_idx
+            else:
+                break
+        self.min_heap[curr_idx] = curr
+        self.index[curr.key] = curr_idx
 
     def __heapify_down(self, key):
         curr_idx = self.index[key]
-        curr_value = self.min_heap[curr_idx].value
+        curr = self.min_heap[curr_idx]
+        heap_len = len(self.min_heap)
         # if we're heapify-ing down, we should check if either child is 
-        # less than the value at the current node. If so, switch them and recurse
-        l_child_idx, r_child_idx = curr_idx*2 + 1, curr_idx * 2 + 2
-        if l_child_idx < len(self.min_heap) and self.min_heap[l_child_idx] and self.min_heap[l_child_idx].value < curr_value:
-            left_key = self.min_heap[l_child_idx].key
-            self.index[key] = l_child_idx
-            self.index[left_key] = curr_idx
-            # isn't python nifty? 
-            self.min_heap[l_child_idx], self.min_heap[curr_idx] = self.min_heap[curr_idx], self.min_heap[l_child_idx]
-            self.__heapify_down(key)
-        elif r_child_idx < len(self.min_heap) and self.min_heap[r_child_idx] and self.min_heap[r_child_idx].value < curr_value:
-            right_key = self.min_heap[r_child_idx].key
-            self.index[key] = r_child_idx
-            self.index[right_key] = curr_idx
-            # isn't python nifty? 
-            self.min_heap[r_child_idx], self.min_heap[curr_idx] = self.min_heap[curr_idx], self.min_heap[r_child_idx]
-            self.__heapify_down(key)
+        # less than the value at the current node. If so, move child to parent spot
+        # then, continue going down trying to place the original
+        l_child_idx = curr_idx*2 + 1
+        r_child_idx = l_child_idx + 1
+
+        while l_child_idx < heap_len:
+            if self.min_heap[l_child_idx].value < curr.value: 
+                # perfer taking right to maintain complete trees
+                if r_child_idx < heap_len and self.min_heap[r_child_idx].value <= self.min_heap[l_child_idx].value:
+                    right_key = self.min_heap[r_child_idx].key
+                    self.index[right_key] = curr_idx
+                    self.min_heap[curr_idx] = self.min_heap[r_child_idx]
+                    curr_idx = r_child_idx
+                else:
+                    left_key = self.min_heap[l_child_idx].key
+                    self.index[left_key] = curr_idx
+                    self.min_heap[curr_idx] = self.min_heap[l_child_idx]
+                    curr_idx = l_child_idx
+            elif r_child_idx < heap_len and self.min_heap[r_child_idx].value < curr.value:
+                right_key = self.min_heap[r_child_idx].key
+                self.index[right_key] = curr_idx
+                self.min_heap[curr_idx] = self.min_heap[r_child_idx]
+                curr_idx = r_child_idx
+            else:
+                break
+            l_child_idx = curr_idx*2 + 1
+            r_child_idx = l_child_idx + 1
+        self.index[key] = curr_idx
+        self.min_heap[curr_idx] = curr
+
     def __len__(self):
-        return len(self.index)
+        return len(self.min_heap)
     def __bool__(self):
-        return bool(self.index)
+        return bool(self.min_heap)
     def __getitem__(self, key):
         # will throw key error if bad
         idx = self.index[key]
@@ -154,11 +151,9 @@ def Dijkstras(G, s, t):
         ipq.push(node, math.inf)
         parents[node] = node
     ipq.decrease_key(s, 0)
-    while (ipq):
+
+    while ipq:
         key, value = ipq.popmin()
-        if key == t:
-            break
-        # finalized.add(key)
         finalized_dists[key] = value
         for neighbor in G.adj[key]:
             if neighbor in finalized_dists:
@@ -173,16 +168,9 @@ def Dijkstras(G, s, t):
     while (curr != s):
         order_to_end.append(curr)
         curr = parents[curr]
-    print(finalized_dists)
-    print(parents)
-    print(order_to_end + [s])
+    path = [s] + [*reversed(order_to_end)]
+    print(f"Min path from {s} to {t} is {', '.join(map(str, path))}")
         
-
-    # your code here
-
-
-
-
 
 
 # make graph and run functions
