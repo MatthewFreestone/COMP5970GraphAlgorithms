@@ -15,6 +15,7 @@ from plotnine import *
 from networkx.algorithms import bipartite
 import random
 from collections import deque
+import pandas as pd
 
 parser = argparse.ArgumentParser()
 args = parser.parse_args() # no arguments but im leaving this here
@@ -67,7 +68,6 @@ def maximum_matching(G: nx.Graph):
                     queue.append((y,curr))
                     visited.add(y)
         return prev
-    # print(flow_graph.edges)
     while(True):
         previous_nodes = bfs()
         if "t" not in previous_nodes:
@@ -80,7 +80,6 @@ def maximum_matching(G: nx.Graph):
         prev = previous_nodes[curr]
         while prev != curr:
             flow_graph[prev][curr]["flow"] += 1
-            # e["flow"] += 1
             # no backward flow updates on (*, s) or (t, *)
             if curr != 't' and prev != 's':
                 flow_graph[curr][prev]["flow"] -= 1
@@ -118,25 +117,30 @@ Note: the input is a multi-graph
 On each input graph, run 200 iterations of Kargers, report the minimum cut size, and plot a distribution of cut sizes across iterations
 I suggest using plotnine for this, a python implementation of ggplot 
 '''
-def Kargers(G: nx.MultiGraph):
-    def contract(H:nx.MultiGraph, x, y):
-        for d in list(H.adj(y)):
-            if d != x:
-                H.add_edge((x,d))
-                H.remove_edge((y,d))
+def Kargers(G: nx.MultiGraph, filename: str):
+    def contract(H: nx.MultiGraph, x, y):
+        for _,b in list(H.edges(y)):
+            if b == x:
+                continue
+            H.add_edge(x,b)
+            # H.remove_edge(y,b)
         H.remove_node(y)
-
     ITERS = 200
     min_cuts = []
     for _ in range(ITERS):
         H = G.copy()
         num_nodes = len(H.nodes)
         while num_nodes > 2:
-            x,y = random.choice(H.edges)
+            x,y,_ = random.choice([*H.edges])
             contract(H, x, y)
-            num_nodes -= 1
+            num_nodes = len(H.nodes)
         min_cuts.append(len(H.edges))
-
+    p = (
+        ggplot(aes(x="Min Cut Size"), pd.DataFrame({"Min Cut Size": min_cuts}))
+        + geom_histogram(bins=10)
+    )
+    p.save(filename)
+    print("Best Min Cut:", min(min_cuts))
         
 
 
@@ -185,6 +189,5 @@ for (x,y) in G2.edges:
             G2.remove_edge(x,y)
 
 G2 = nx.MultiGraph(G2)
-
-Kargers(G)
-Kargers(G2)
+Kargers(G, "kargers_G.png")
+Kargers(G2, "kargers_G2.png")
