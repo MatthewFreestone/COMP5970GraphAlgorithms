@@ -123,7 +123,6 @@ def Kargers(G: nx.MultiGraph, filename: str):
             if b == x:
                 continue
             H.add_edge(x,b)
-            # H.remove_edge(y,b)
         H.remove_node(y)
     ITERS = 200
     min_cuts = []
@@ -131,13 +130,15 @@ def Kargers(G: nx.MultiGraph, filename: str):
         H = G.copy()
         num_nodes = len(H.nodes)
         while num_nodes > 2:
-            x,y,_ = random.choice([*H.edges])
+            x,y,z = random.choice([*H.edges])
+            #H = nx.contracted_edge(H, (x,y,z), self_loops = False)
             contract(H, x, y)
             num_nodes = len(H.nodes)
+        print(len(H.edges), end=" ")
         min_cuts.append(len(H.edges))
     p = (
         ggplot(aes(x="Min Cut Size"), pd.DataFrame({"Min Cut Size": min_cuts}))
-        + geom_histogram(bins=10)
+        + geom_histogram(binwidth=1)
     )
     p.save(filename)
     print("Best Min Cut:", min(min_cuts))
