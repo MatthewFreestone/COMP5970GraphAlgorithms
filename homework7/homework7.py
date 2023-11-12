@@ -15,7 +15,7 @@ from plotnine import *
 from networkx.algorithms import bipartite
 import random
 import math
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 parser = argparse.ArgumentParser()
 args = parser.parse_args() # no arguments but im leaving this here
@@ -169,14 +169,15 @@ def Dijkstra(G, s, t):
         order_to_end.append(curr)
         curr = parents[curr]
     path = [s] + [*reversed(order_to_end)]
-    print(f"Min path from {s} to {t} is {', '.join(map(str, path))}")
-    print(f"Dijkstra {expanded=} {touched=}")
+    print(f"Dijkstra: Min path from {s} to {t} is {', '.join(map(str, path))}")
+    print(f"Dijkstra {expanded=} {touched=}", end='\n\n')
 
         
 
 def Astar(G, s, t):
     def h(x):
-        return math.hypot(x[0]-t[0], x[1]-t[1])
+        return abs(x[0]-t[0])  + abs(x[1]-t[1])
+        # return math.hypot(x[0]-t[0], x[1]-t[1])
 
     ipq = IndexedPriorityQueue()
     curr_dists = {}
@@ -213,7 +214,7 @@ def Astar(G, s, t):
         order_to_end.append(curr)
         curr = parents[curr]
     path = [s] + [*reversed(order_to_end)]
-    print(f"Min path from {s} to {t} is {', '.join(map(str, path))}")
+    print(f"A*: Min path from {s} to {t} is {', '.join(map(str, path))}")
     print(f"A* {expanded=} {touched=}")
         
 
@@ -229,32 +230,19 @@ visualize the final graph colored by cluster
 def louvain(G):
     node_to_community = {v:i for i, v in enumerate(list(G.nodes))}
     community_to_nodes = {node_to_community[v]:{v} for v in node_to_community}
-    m = len(G.nodes)
-    def modularity():
-        actual = 0
-        expected = 0
-        for comm in community_to_nodes.values():
-            for node in comm:
-                for _,y,data in G.edges(node,data=True):
-                    if y in comm:
-                        actual += data.get('weight', 1)
-            for node1 in comm:
-                for node2 in comm:
-                    expected += (G.degree[node1] * G.degree[node2])/(2*m)
-        return 1/(2*m) * (actual - expected)
     
-    def possible_modularity(moving_node, new_comm):
+    def possible_modularity(G, moving_node, new_comm):
         old_comm = node_to_community[moving_node]
         community_to_nodes[old_comm].remove(v)
-        node_to_community[v] = new_comm
         community_to_nodes[new_comm].add(v)
-        res = modularity()
+        res = nx.community.modularity(G, community_to_nodes.values())
         community_to_nodes[old_comm].add(v)
-        node_to_community[v] = old_comm
         community_to_nodes[new_comm].remove(v)
         return res
     
+    original_G = G.copy()
     start_nodes_to_cluster = {}
+    iteration = 0
     any_change = True
     while any_change:
         while any_change:
@@ -262,72 +250,106 @@ def louvain(G):
             for v in G.nodes:
                 best_comm = None
                 best_delta = 0
-                start_modularity = modularity()
-                print(start_modularity)
+                start_modularity = nx.community.modularity(G, community_to_nodes.values())
                 for x in G.adj[v]:
                     if node_to_community[x] != node_to_community[v]:
-                        delta = possible_modularity(v, node_to_community[x]) - start_modularity
+                        delta = possible_modularity(G, v, node_to_community[x]) - start_modularity
                         if delta > best_delta:
                             best_comm = node_to_community[x]
                             best_delta = delta
                 if best_comm is not None:
                     any_change = True
-                    community_to_nodes[node_to_community[v]].remove(v)
+                    old_comm = node_to_community[v]
+                    community_to_nodes[old_comm].remove(v)
+                    if len(community_to_nodes[old_comm]) == 0:
+                        del community_to_nodes[old_comm]
                     node_to_community[v] = best_comm
                     community_to_nodes[best_comm].add(v)
+
+        any_change = False
         if not start_nodes_to_cluster:
             # keep track for the first one
             start_nodes_to_cluster = {k:v for k, v in node_to_community.items()} 
-            print(start_nodes_to_cluster)
         else:
-            pass
-        # G’ ← collapse communities into single nodes and make multi graph
-        # G_prime = nx.MultiGraph(G)
-        # for node_in_comm in community_to_nodes.values():
-        #     to_contract = list(node_in_comm)
-        #     start = to_contract[0]
-        #     for node in to_contract[1:]:
-        #         G_prime = nx.contracted_nodes(G_prime, start, node, self_loops=False)
-        # if not nx.is_isomorphic(G, G_prime):
-        #     G = G_prime
-        # print(G)
-        # if G’ ̸ = G then
-        # any_change ← true
-        # G ← G
+            # start_nodes_to_cluster contains the results of the last one
+            # the name of the contacted node in the new graph is one of the old ones
+            # kinda like union find, it has a representative.
+            new_start_nodes_to_cluster = {}
+            for k, v in node_to_community.items():
+                new_start_nodes_to_cluster[k] = v
+            # if a key is not in the new one, look though existing keys
+            # for each, see if it was in the same cluster in the step before. 
+            # if so, take the new cluster value
+            for oldkey in start_nodes_to_cluster:
+                if oldkey not in new_start_nodes_to_cluster:
+                    for newkey in new_start_nodes_to_cluster:
+                        if start_nodes_to_cluster[newkey] == start_nodes_to_cluster[oldkey]:
+                            new_start_nodes_to_cluster[oldkey] = new_start_nodes_to_cluster[newkey]
+                            break
+            start_nodes_to_cluster = new_start_nodes_to_cluster
+
+        node_groups = defaultdict(set)
+        for k,v in start_nodes_to_cluster.items():
+            node_groups[v].add(k)
+        node_groups = list(node_groups.values())
+
+        print(f"After iteration {iteration}, clustering was")
+        print(start_nodes_to_cluster, end="\n\n")
+        # print(node_groups)
+        plt.figure(iteration)
+        pos = nx.spring_layout(original_G)
+        colors = ['red', 'green', 'blue', 'orange', 'yellow', 'purple']
+        for i, group in enumerate(node_groups):
+            nx.draw_networkx_nodes(original_G, pos, nodelist=group, node_size=50, node_color=colors[i])
+        nx.draw_networkx_edges(original_G, pos, width=0.3)
+        plt.axis("off")
+        plt.savefig(f'clustering_iter{iteration}.png')
+        
+
+        G_prime = nx.MultiGraph(G)
+        for node_in_comm in community_to_nodes.values():
+            to_contract = list(node_in_comm)
+            start = to_contract[0]
+            for node in to_contract[1:]:
+                G_prime = nx.contracted_nodes(G_prime, start, node, self_loops=False)
+        if not nx.is_isomorphic(G, G_prime) and len(G_prime.nodes) > 1:
+            G = G_prime
+            any_change = True
+            node_to_community = {v:i for i, v in enumerate(list(G.nodes))}
+            community_to_nodes = {node_to_community[v]:{v} for v in node_to_community}
+            iteration += 1
 
 
 
 
+# make graph and run functions
+G = nx.grid_2d_graph(5,8)
+G.remove_node((1,1))
+G.remove_node((1,2))
+G.remove_node((1,3))
+G.remove_node((3,1))
+G.remove_node((3,3))
+G.remove_node((3,4))
+G.remove_node((3,5))
+G.remove_node((3,6))
+G.remove_node((0,5))
+G.remove_node((1,5))
+'''
+This graph should represent the following maze
+_____
+t    |
+   x |
+xx x |
+   x |
+ x x |
+ x   |
+ x x |
+s    |
+-----
 
-
-# # make graph and run functions
-# G = nx.grid_2d_graph(5,8)
-# G.remove_node((1,1))
-# G.remove_node((1,2))
-# G.remove_node((1,3))
-# G.remove_node((3,1))
-# G.remove_node((3,3))
-# G.remove_node((3,4))
-# G.remove_node((3,5))
-# G.remove_node((3,6))
-# G.remove_node((0,5))
-# G.remove_node((1,5))
-# '''
-# This graph should represent the following maze
-# _____
-# t    |
-#    x |
-# xx x |
-#    x |
-#  x x |
-#  x   |
-#  x x |
-# s    |
-# -----
-
-# '''
-# Dijkstra(G, (0,0), (0,7))
-# Astar(G, (0,0), (0,7))
+'''
+Dijkstra(G, (0,0), (0,7))
+Astar(G, (0,0), (0,7))
 
 #%%
 import networkx as nx
