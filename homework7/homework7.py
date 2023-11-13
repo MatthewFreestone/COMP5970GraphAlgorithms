@@ -153,6 +153,8 @@ def Dijkstra(G, s, t):
         expanded += 1
         key, value = ipq.popmin()
         finalized_dists[key] = value
+        if key == t:
+            break
         for neighbor in G.adj[key]:
             if neighbor in finalized_dists:
                 continue
@@ -160,6 +162,7 @@ def Dijkstra(G, s, t):
             touched += 1
             weight = 1
             possible_new_val = value + weight
+
             if possible_new_val < ipq[neighbor]:
                 ipq.decrease_key(neighbor, possible_new_val)
                 parents[neighbor] = key
@@ -170,9 +173,7 @@ def Dijkstra(G, s, t):
         curr = parents[curr]
     path = [s] + [*reversed(order_to_end)]
     print(f"Dijkstra: Min path from {s} to {t} is {', '.join(map(str, path))}")
-    print(f"Dijkstra {expanded=} {touched=}", end='\n\n')
-
-        
+    print(f"Dijkstra {expanded=} {touched=}", end='\n\n')    
 
 def Astar(G, s, t):
     def h(x):
@@ -197,6 +198,9 @@ def Astar(G, s, t):
         key, _ = ipq.popmin()
         value = curr_dists[key]
         finalized_dists[key] = value
+        if key == t:
+            break
+            
         for neighbor in G.adj[key]:
             if neighbor in finalized_dists:
                 continue
@@ -204,6 +208,7 @@ def Astar(G, s, t):
             touched += 1
             weight = 1
             possible_new_val = value + weight
+
             if possible_new_val < curr_dists[neighbor]:
                 ipq.decrease_key(neighbor, possible_new_val + h(neighbor))
                 curr_dists[neighbor] = possible_new_val
@@ -351,15 +356,12 @@ s    |
 Dijkstra(G, (0,0), (0,7))
 Astar(G, (0,0), (0,7))
 
-#%%
-import networkx as nx
-G = nx.Graph()
-G.add_nodes_from([x for x in "abcdefghijklmno"])
-G.add_edges_from([("a","b"),("a","c"),("a","d"),("b","c"),("b","d"),("c","e"),("d","e")])
-G.add_edges_from([("f","g"),("f","h"),("f","i"),("f","j"),("g","j"),("g","h"),("h","i"),("h","j"),("i","j")])
-G.add_edges_from([("k","l"),("k","n"),("k","m"),("l","n"),("n","m"),("n","o"),("m","o")])
-G.add_edges_from([("e","f"),("j","l"),("j","n")])
+# G = nx.Graph()
+# G.add_nodes_from([x for x in "abcdefghijklmno"])
+# G.add_edges_from([("a","b"),("a","c"),("a","d"),("b","c"),("b","d"),("c","e"),("d","e")])
+# G.add_edges_from([("f","g"),("f","h"),("f","i"),("f","j"),("g","j"),("g","h"),("h","i"),("h","j"),("i","j")])
+# G.add_edges_from([("k","l"),("k","n"),("k","m"),("l","n"),("n","m"),("n","o"),("m","o")])
+# G.add_edges_from([("e","f"),("j","l"),("j","n")])
 
-louvain(G)
+# louvain(G)
 
-# %%
