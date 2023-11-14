@@ -150,15 +150,14 @@ def Dijkstra(G, s, t):
     ipq.decrease_key(s, 0)
 
     while ipq:
-        expanded += 1
         key, value = ipq.popmin()
+        expanded += 1
         finalized_dists[key] = value
         if key == t:
             break
         for neighbor in G.adj[key]:
             if neighbor in finalized_dists:
                 continue
-            # weight = G[key][neighbor]['weight']
             touched += 1
             weight = 1
             possible_new_val = value + weight
@@ -172,13 +171,16 @@ def Dijkstra(G, s, t):
         order_to_end.append(curr)
         curr = parents[curr]
     path = [s] + [*reversed(order_to_end)]
-    print(f"Dijkstra: Min path from {s} to {t} is {', '.join(map(str, path))}")
-    print(f"Dijkstra {expanded=} {touched=}", end='\n\n')    
+    # print(f"Dijkstra: Min path from {s} to {t} is {', '.join(map(str, path))}")
+    print(f"Dijkstra: Min path from {s} to {t} has cost {len(path)}")
+    print(f"Dijkstra {expanded=} {touched=}", end='\n\n') 
+
 
 def Astar(G, s, t):
     def h(x):
-        return abs(x[0]-t[0])  + abs(x[1]-t[1])
+        # return 0
         # return math.hypot(x[0]-t[0], x[1]-t[1])
+        return abs(x[0]-t[0])  + abs(x[1]-t[1])
 
     ipq = IndexedPriorityQueue()
     curr_dists = {}
@@ -188,14 +190,15 @@ def Astar(G, s, t):
     touched = 0
     for node in G.nodes:
         ipq.push(node, math.inf)
+        # touched += 1
         curr_dists[node] = math.inf
         parents[node] = node
     ipq.decrease_key(s, h(s))
     curr_dists[s] = 0
 
     while ipq:
-        expanded += 1
         key, _ = ipq.popmin()
+        expanded += 1
         value = curr_dists[key]
         finalized_dists[key] = value
         if key == t:
@@ -204,8 +207,8 @@ def Astar(G, s, t):
         for neighbor in G.adj[key]:
             if neighbor in finalized_dists:
                 continue
-            # weight = G[key][neighbor]['weight']
             touched += 1
+            # weight = G[key][neighbor]['weight']
             weight = 1
             possible_new_val = value + weight
 
@@ -219,10 +222,9 @@ def Astar(G, s, t):
         order_to_end.append(curr)
         curr = parents[curr]
     path = [s] + [*reversed(order_to_end)]
-    print(f"A*: Min path from {s} to {t} is {', '.join(map(str, path))}")
+    # print(f"A*: Min path from {s} to {t} is {', '.join(map(str, path))}")
+    print(f"A*: Min path from {s} to {t} has cost {len(path)}")
     print(f"A* {expanded=} {touched=}")
-        
-
 
 
 
@@ -247,7 +249,7 @@ def louvain(G):
     
     original_G = G.copy()
     start_nodes_to_cluster = {}
-    iteration = 0
+    iteration = 1
     any_change = True
     while any_change:
         while any_change:
@@ -305,8 +307,9 @@ def louvain(G):
         pos = nx.spring_layout(original_G)
         colors = ['red', 'green', 'blue', 'orange', 'yellow', 'purple']
         for i, group in enumerate(node_groups):
-            nx.draw_networkx_nodes(original_G, pos, nodelist=group, node_size=50, node_color=colors[i])
+            nx.draw_networkx_nodes(original_G, pos, nodelist=group, node_size=150, node_color=colors[i])
         nx.draw_networkx_edges(original_G, pos, width=0.3)
+        nx.draw_networkx_labels(original_G, pos, font_color='w')
         plt.axis("off")
         plt.savefig(f'clustering_iter{iteration}.png')
         
@@ -356,12 +359,12 @@ s    |
 Dijkstra(G, (0,0), (0,7))
 Astar(G, (0,0), (0,7))
 
-# G = nx.Graph()
-# G.add_nodes_from([x for x in "abcdefghijklmno"])
-# G.add_edges_from([("a","b"),("a","c"),("a","d"),("b","c"),("b","d"),("c","e"),("d","e")])
-# G.add_edges_from([("f","g"),("f","h"),("f","i"),("f","j"),("g","j"),("g","h"),("h","i"),("h","j"),("i","j")])
-# G.add_edges_from([("k","l"),("k","n"),("k","m"),("l","n"),("n","m"),("n","o"),("m","o")])
-# G.add_edges_from([("e","f"),("j","l"),("j","n")])
+G = nx.Graph()
+G.add_nodes_from([x for x in "abcdefghijklmno"])
+G.add_edges_from([("a","b"),("a","c"),("a","d"),("b","c"),("b","d"),("c","e"),("d","e")])
+G.add_edges_from([("f","g"),("f","h"),("f","i"),("f","j"),("g","j"),("g","h"),("h","i"),("h","j"),("i","j")])
+G.add_edges_from([("k","l"),("k","n"),("k","m"),("l","n"),("n","m"),("n","o"),("m","o")])
+G.add_edges_from([("e","f"),("j","l"),("j","n")])
 
-# louvain(G)
+louvain(G)
 
