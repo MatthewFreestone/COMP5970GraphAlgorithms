@@ -76,7 +76,7 @@ class QNode:
 
 def knn_search(B: BallTree.Node, t: np.ndarray, k: int, Q: list = []):
     if len(Q) == k and np.linalg.norm(t - B.center) - B.radius > Q[0].distance:
-        return [q.item.center for q in Q]
+        return [tuple(q.item.center) for q in Q]
     elif B.leaf:
         dist = np.linalg.norm(t - B.center)
         if len(Q) == 0 or dist < Q[0].distance:
@@ -92,7 +92,7 @@ def knn_search(B: BallTree.Node, t: np.ndarray, k: int, Q: list = []):
         else:
             knn_search(B.right, t, k, Q)
             knn_search(B.left, t, k, Q)
-    return [q.item.center for q in Q]
+    return [tuple(q.item.center) for q in Q]
     
 
 
@@ -108,20 +108,20 @@ class PrioritizedItem:
     item: Any=field(compare=False)
 '''
 def create_knn_graph(B, data, k):
-    print("create knn graph and output dot file")
+    G = nx.DiGraph()
     for d in data:
-        print
-    # for each data point, find its k nearest neighbors and make edges in a graph to them
-    # you will use your knn_search function to do this
-    # you will need a max heap and can either use your code from a previous
-    # homework or the queue.PriorityQueue (but this is min-heap so make sure to 
-    # use the negative of the distance to make it a max heap)
-
+        closest = knn_search(B.root, d, k)
+        for c in closest:
+            G.add_edge(tuple(d),c)
+    nx.gexf.write_gexf(G, './file.gexf')
 
 
 data = np.loadtxt("data.csv",delimiter=",")
 tree = BallTree(data)
 
-res = knn_search(tree.root, np.array([0,0]), 10)
-print(res)
-# create_knn_graph(tree, data, 5)
+# res = knn_search(tree.root, np.array([0,0]), 5)
+# print(sorted(res, key=lambda x: np.linalg.norm(x-np.array([0,0]))))
+# s = sorted(data, key=lambda x: np.linalg.norm(x-np.array([0,0])))
+# print(s[:5])
+# print(res)
+create_knn_graph(tree, data, 3)
