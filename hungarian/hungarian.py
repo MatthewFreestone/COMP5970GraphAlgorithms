@@ -44,50 +44,54 @@ def hungarian(inG, left_nodes=None, weight='weight'):
 
     # match free vertices
     while True:
-        print('matching', matching)
-        print('potentials', potentials)
-        if all((u in matching for u in left_nodes)):
-            # we're done
-            formatted_matching = {}
-            for u, v in matching.items():
-                if u in left_nodes:
-                    formatted_matching[u] = v
-            return formatted_matching
+        # print('matching', matching)
+        # print('potentials', potentials)
+        # if all((u in matching for u in left_nodes)):
+        #     # we're done
+        #     return matching
+        
+        def augment(visited, u):
+            if u in visited:
+                return False
+            visited.add(u)
+            for v, data in G[u].items():
+                if potentials[u] + potentials[v] != data[weight]:
+                    continue
+                if v not in matching or augment(visited, matching[v]):
+                    matching[v] = u
+                    matching[u] = v
+                    return True
+            return False
 
-        queue = deque([u for u in left_nodes if u not in matching])
-        previous = {u: None for u in queue}
-        needs_potential_change = False
-        while queue:
-            u = queue.popleft()
-            for _,v,data in G.edges(u, data=True):
-                w = data[weight]
-                if v not in previous and potentials[u] + potentials[v] == w:
-                    if v in right_nodes:
-                        previous[v] = u
-                        break
+        # find an unmatched left node
+        for u in left_nodes:
+            visited = set()
+            if u not in matching and not augment(visited, u):
+                cutset = set()
+                for v in visited:
+                    if v not in matching:
+                        cutset.add(v)
                     else:
-                        queue.append(matching[v])
-                        queue.append(v)
-                        previous[v] = u
+                        cutset.add(v)
+                        cutset.add(matching[v])
+                break
         else:
-            needs_potential_change = True
+            # we're done
+            return matching
+        # print('matching after augment', matching)
+        # print('cutset', cutset)
 
-        if not needs_potential_change:
-            matching.update({v:k for k,v in previous.items() if v is not None})
-        print(previous)
-        print('matching after', matching)
+
         # use augmenting path as cut set
         # adjust edges between the cut set and complement
-        # cutset = set(augmenting_path)
-        cutset = set(previous.keys())
         s = set(left_nodes).intersection(cutset)
         t = set(right_nodes).intersection(cutset)
-        print(s,t)
+        # print(s,t)
         min_delta = float('inf')
         for u,v,data in G.edges(data=True):
             if u in s and v not in t:
                 possible = potentials[u] + potentials[v] - data[weight]
-                print(u,v,possible)
+                # print(u,v,possible)
                 min_delta = min(min_delta, possible)
         if min_delta == float('inf'):
             raise nx.NetworkXError("Min delta is inf")
@@ -103,20 +107,46 @@ def hungarian(inG, left_nodes=None, weight='weight'):
         # this is guaranteed to have made an other edge visible.
             
 if __name__ == "__main__":
-    G = bipartite.random_graph(3, 3, 1, seed=42)
-    # add random weights
-    #33
+    G = bipartite.random_graph(5, 10, 1)
+    left_nodes = {n for n, d in G.nodes(data=True) if d['bipartite'] == 0}
+    right_nodes = {r for r in G.nodes() if r not in left_nodes}
 
-    random.seed(35)
+    # random.seed(38)
+    available_weights = list(range(1, 150))
+    random.shuffle(available_weights)
+    idx = 0
     for u, v in G.edges():
-        G[u][v]['weight'] = random.randint(1, 10)
-    print(G.edges(data=True))
+        G[u][v]['weight'] = available_weights[idx]
+        idx += 1
+    # print(G.edges(data=True))
 
-    # pos = nx.bipartite_layout(G, [0, 1, 2])
-    # nx.draw_networkx(G, pos=pos)
-    # labels = nx.get_edge_attributes(G, 'weight')
-    # nx.draw_networkx_edge_labels(G, pos=pos, edge_labels=labels, label_pos=0.8)
+    pos = nx.bipartite_layout(G, left_nodes)
+    nx.draw_networkx(G, pos=pos)
+    labels = nx.get_edge_attributes(G, 'weight')
+    nx.draw_networkx_edge_labels(G, pos=pos, edge_labels=labels, label_pos=0.8)
     # plt.show()
 
-    matching = hungarian(G)
-    print(matching)
+    def fmt_match(m):
+        return {k: v for k, v in m.items() if k in left_nodes}
+
+    max_match = hungarian(G)
+    max_match = fmt_match(max_match)
+    total_weight = 0
+    for u, v in max_match.items():
+        # don't count fake nodes
+        if u in G.nodes() and v in G.nodes():
+            total_weight += G[u][v]['weight']
+    print(max_match, total_weight)
+
+    H = G.copy()
+    for u,v,d in H.edges(data=True):
+        d['weight'] = -d['weight']
+    min_match = nx.bipartite.minimum_weight_full_matching(H, top_nodes=left_nodes)
+    min_match = fmt_match(min_match)
+    total_weight = 0
+    for u, v in min_match.items():
+        if u in H.nodes() and v in H.nodes():
+            total_weight -= H[u][v]['weight']
+    print(min_match, total_weight)
+
+    # plt.show()
