@@ -26,10 +26,13 @@ def hungarian(inG, left_nodes=None, weight='weight'):
             right_nodes.add(nodename)
 
     # add fake edges to make it complete
+    fake_edges = []
     for u in left_nodes:
         for v in right_nodes:
             if not G.has_edge(u, v):
+                fake_edges.append((u,v, {'weight': 0}))
                 G.add_edge(u, v, weight=-int(1e9))
+    print('Fake:', fake_edges)
 
     # Initialize dictionary of matching edges and potentials
     matching = {}
@@ -107,19 +110,21 @@ def hungarian(inG, left_nodes=None, weight='weight'):
         # this is guaranteed to have made an other edge visible.
             
 if __name__ == "__main__":
-    G = bipartite.random_graph(5, 10, 1)
+    random.seed(40)
+    G = bipartite.random_graph(5, 3, 0.7)
     left_nodes = {n for n, d in G.nodes(data=True) if d['bipartite'] == 0}
     right_nodes = {r for r in G.nodes() if r not in left_nodes}
 
-    # random.seed(38)
-    available_weights = list(range(1, 150))
-    random.shuffle(available_weights)
+    # available_weights = list(range(1, 50))
+    # random.shuffle(available_weights)
+    available_weights = [random.randint(1,9) for _ in range(len(G.edges))]
     idx = 0
     for u, v in G.edges():
         G[u][v]['weight'] = available_weights[idx]
         idx += 1
     # print(G.edges(data=True))
 
+    print(G.edges(data=True))
     pos = nx.bipartite_layout(G, left_nodes)
     nx.draw_networkx(G, pos=pos)
     labels = nx.get_edge_attributes(G, 'weight')
@@ -149,4 +154,4 @@ if __name__ == "__main__":
             total_weight -= H[u][v]['weight']
     print(min_match, total_weight)
 
-    # plt.show()
+    plt.show()
