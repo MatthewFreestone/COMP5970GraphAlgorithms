@@ -83,15 +83,21 @@ def hungarian(inG, left_nodes=None, weight='weight'):
             # visited = set()
             visited = fakeset()
             if u not in matching:
+                old_matching = matching.copy()
                 res = augment(visited, u)
+                # print(old_matching, matching, visited)
                 traversal = []
-                for v in visited:
-                    if v not in matching:
-                        traversal.append(v)
-                    else:
-                        if res:
+                if res:
+                    traversal.append(visited[0])
+                    for v in visited[1:]:
+                        if old_matching.get(v, None) != matching[v]:
+                            traversal.append(old_matching[v])
                             traversal.append(v)
-                            traversal.append(matching[v])
+                    traversal.append(matching[traversal[-1]])
+                else:
+                    for v in visited:
+                        if v not in matching:
+                            traversal.append(v)
                         else:
                             traversal.append(matching[v])
                             traversal.append(v)
