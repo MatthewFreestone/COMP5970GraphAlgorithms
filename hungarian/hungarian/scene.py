@@ -46,14 +46,14 @@ class Bipartite2(Scene):
                 new_r[v] = right_node_constructor()
         return new_r
     
-    def augment(self, augmenting_path, lines):
+    def augment(self, edges_on_augmenting_path, lines):
         # augmenting path starts on left, terminates somewhere on the right
         used_lines = []
         result = []
         green = []
-        for i in range(len(augmenting_path)):
+        for i in range(len(edges_on_augmenting_path)):
             if i % 2 == 0:
-                u,v = augmenting_path[i], augmenting_path[i+1]
+                u,v = edges_on_augmenting_path[i]
                 l = lines[u][v]
                 used_lines.append((u,v))
                 gl = l.copy()
@@ -64,11 +64,9 @@ class Bipartite2(Scene):
                 nl.stroke_color = ManimColor('#FF0000')
                 result.append(Transform(l, nl))
             else:
-                if i == len(augmenting_path) - 1:
-                    continue
-                u,v = augmenting_path[i], augmenting_path[i+1]
-                l = lines[v][u]
-                used_lines.append((v,u))
+                u,v = edges_on_augmenting_path[i]
+                l = lines[u][v]
+                used_lines.append((u,v))
                 gl = l.copy()
                 gl.stroke_color = ManimColor('#00FF00')
                 green.append(Transform(l, gl))
@@ -82,18 +80,17 @@ class Bipartite2(Scene):
         self.wait()
         return used_lines
     
-    def failedAugment(self, partial_path, lines, left_nodes, right_nodes):
+    def failedAugment(self, edges_on_path, lines, left_nodes, right_nodes):
         # failed augmenting path starts on left, terminates somewhere not on left unmatched
                 
         path = []
-        cutset_nodes = [left_nodes[partial_path[0]]]
-        for i in range(len(partial_path)):
-            if i == len(partial_path) - 1:
-                continue
-            u,v = partial_path[i], partial_path[i+1]
-            cutset_nodes.append(left_nodes.submob_dict.get(v, None) or right_nodes.submob_dict.get(v,None))
+        cutset_nodes = set()
+        for i in range(len(edges_on_path)):
+            u,v = edges_on_path[i]
+            cutset_nodes.add(left_nodes[u])
+            cutset_nodes.add(right_nodes[v])
             
-            l = lines[u][v] if i % 2 == 0 else lines[v][u]
+            l = lines[u][v]
             nl = l.copy()
             nl.stroke_color = ManimColor('#00FF00')
             path.append(Transform(l, nl))
@@ -105,7 +102,7 @@ class Bipartite2(Scene):
             nc = c.copy()
             nc.stroke_color = ManimColor('#00FF00')
             cutset_transform.append(Transform(c,nc))
-        self.play(Indicate(cutset_nodes[-1], scale_factor=1.5))
+        # self.play(Indicate(cutset_nodes[-1], scale_factor=1.5))
         self.play(*cutset_transform)
         # self.wait()
 
@@ -272,11 +269,11 @@ class Bipartite2(Scene):
         self.wait()
 
         matched_lines = matchinglist()
-        matched_lines.xor(self.augment([0,5], all_lines))
-        matched_lines.xor(self.augment([1,6], all_lines))
-        matched_lines.xor(self.augment([2,7], all_lines))
+        matched_lines.xor(self.augment([(0,5)], all_lines))
+        matched_lines.xor(self.augment([(1,6)], all_lines))
+        matched_lines.xor(self.augment([(2,7)], all_lines))
 
-        self.failedAugment([3,5,0], all_lines, l, r)
+        self.failedAugment([(3, 5), (0, 5)], all_lines, l, r)
         step4b2 = Text('4b. Augmenting Path Stuck, but not all nodes matched', font_size=24).align_on_border(DOWN)
         
         self.play(Succession(FadeOut(step4b),FadeIn(step4b2)))
@@ -310,7 +307,7 @@ class Bipartite2(Scene):
         self.play(FadeOut(caption), FadeOut(step4c2))
 
 
-        ######### NEXT ITERATION ########
+        # ######### NEXT ITERATION ########
 
         self.play(Create(step4a))
         visible =  {(0, 7), (2, 7), (4, 6), (0, 5), (1, 6), (3, 5)}
@@ -328,7 +325,7 @@ class Bipartite2(Scene):
         self.play(Create(step4b))
         self.wait()
 
-        self.failedAugment([3, 5, 0, 7, 2], all_lines, l, r)
+        self.failedAugment([(3, 5), (0, 5), (0, 7), (2, 7)], all_lines, l, r)
         
         self.play(Succession(FadeOut(step4b),FadeIn(step4b2)))
         self.wait()
@@ -378,8 +375,8 @@ class Bipartite2(Scene):
         self.play(Create(step4b))
         self.wait()
 
-        matched_lines.xor(self.augment([3, 5, 0, 'F_0'], all_lines))
-        self.failedAugment([4, 6, 1], all_lines, l, r)
+        matched_lines.xor(self.augment([(3, 5), (0, 5), (0, 'F_1')], all_lines))
+        self.failedAugment([(4, 6), (1, 6)], all_lines, l, r)
         
         self.play(Succession(FadeOut(step4b),FadeIn(step4b2)))
         self.wait()
@@ -411,7 +408,7 @@ class Bipartite2(Scene):
         self.play(FadeOut(caption), FadeOut(step4c2))
 
 
-        ######### NEXT ITERATION ########
+        # ######### NEXT ITERATION ########
 
         self.play(Create(step4a))
         visible =  {(0, 7), (0, 'F_1'), (2, 7), (0, 'F_0'), (4, 6), (4, 5), (0, 5), (1, 6), (4, 7), (3, 5)}
@@ -429,57 +426,57 @@ class Bipartite2(Scene):
         self.play(Create(step4b))
         self.wait()
 
-        self.failedAugment([4, 5, 3, 6, 1, 7, 2], all_lines, l, r)
+        self.failedAugment([(4, 5), (3, 5), (4, 6), (1, 6), (4, 7), (2, 7)], all_lines, l, r)
         
-        # self.play(Succession(FadeOut(step4b),FadeIn(step4b2)))
-        # self.wait()
-        # self.wait()
+        self.play(Succession(FadeOut(step4b),FadeIn(step4b2)))
+        self.wait()
+        self.wait()
 
-        # self.play(Succession(FadeOut(step4b2), FadeIn(step4c)))
-
-
-
-        # self.showOnlyMatched(all_lines, visible, matched_lines)
-
-        # across = {(1, 'F_0'): 4, (1, 'F_1'): 4, (2, 'F_0'): 2, (2, 'F_1'): 2, (3, 'F_0'): 3, (3, 'F_1'): 3, (4, 'F_0'): 2, (4, 'F_1'): 2}
-        # to_fade_out = self.drawAcrossCutset(all_lines, across)
+        self.play(Succession(FadeOut(step4b2), FadeIn(step4c)))
 
 
-        # step4c2 = Tex('$$\\textrm{4c. change} = \min_{x \in S, y \in T}(l(x)+l(y)-w(x,y))$$', font_size=36).align_on_border(DOWN)
-        # self.play(Succession(FadeOut(step4c), FadeIn(step4c2)))
-        # self.wait()
-        # self.wait()
-        # caption = Tex(f"$= \min({','.join(map(str, across.values()))}) = {min(across.values())}$", font_size=36).align_on_border(DOWN)
-        # self.play(FadeIn(caption), step4c2.animate().shift(0.5*UP))
-        # self.wait()
 
-        # old_potentials = new_potentials
-        # new_potentials = {0: 0, 1: 2, 2: 0, 3: 1, 4: 0, 5: 5, 6: 6, 'F_0': 0, 7: 3, 'F_1': 0}
-        # self.adjustPotentials(old_potentials, new_potentials, potentials_vdict, r, l)
+        self.showOnlyMatched(all_lines, visible, matched_lines)
 
-        # self.play(*map(FadeOut, to_fade_out))
-        # self.play(FadeOut(caption), FadeOut(step4c2))
+        across = {(1, 'F_0'): 4, (1, 'F_1'): 4, (2, 'F_0'): 2, (2, 'F_1'): 2, (3, 'F_0'): 3, (3, 'F_1'): 3, (4, 'F_0'): 2, (4, 'F_1'): 2}
+        to_fade_out = self.drawAcrossCutset(all_lines, across)
+
+
+        step4c2 = Tex('$$\\textrm{4c. change} = \min_{x \in S, y \in T}(l(x)+l(y)-w(x,y))$$', font_size=36).align_on_border(DOWN)
+        self.play(Succession(FadeOut(step4c), FadeIn(step4c2)))
+        self.wait()
+        self.wait()
+        caption = Tex(f"$= \min({','.join(map(str, across.values()))}) = {min(across.values())}$", font_size=36).align_on_border(DOWN)
+        self.play(FadeIn(caption), step4c2.animate().shift(0.5*UP))
+        self.wait()
+
+        old_potentials = new_potentials
+        new_potentials = {0: 0, 1: 2, 2: 0, 3: 1, 4: 0, 5: 5, 6: 6, 'F_0': 0, 7: 3, 'F_1': 0}
+        self.adjustPotentials(old_potentials, new_potentials, potentials_vdict, r, l)
+
+        self.play(*map(FadeOut, to_fade_out))
+        self.play(FadeOut(caption), FadeOut(step4c2))
 
 
         ######### NEXT ITERATION ########
 
-        # self.play(Create(step4a))
-        # visible =  {(0, 'F_1'), (2, 7), (0, 'F_0'), (2, 'F_1'), (4, 6), (4, 'F_0'), (2, 'F_0'), (4, 5), (1, 6), (4, 7), (3, 5), (4, 'F_1')}
-        # to_fade_in = []
-        # for u, outs in all_lines.items():
-        #     for v in outs.submob_dict.keys():
-        #         if (u,v) in visible:
-        #             if outs[v].stroke_color != ManimColor("#FF0000"):
-        #                 outs[v].stroke_color = ManimColor("#FFFFFF")
-        #                 to_fade_in.append(outs[v])
-        # self.play(*map(FadeIn,to_fade_in))
-        # self.wait()
+        self.play(Create(step4a))
+        visible =  {(0, 'F_1'), (2, 7), (0, 'F_0'), (2, 'F_1'), (4, 6), (4, 'F_0'), (2, 'F_0'), (4, 5), (1, 6), (4, 7), (3, 5), (4, 'F_1')}
+        to_fade_in = []
+        for u, outs in all_lines.items():
+            for v in outs.submob_dict.keys():
+                if (u,v) in visible:
+                    if outs[v].stroke_color != ManimColor("#FF0000"):
+                        outs[v].stroke_color = ManimColor("#FFFFFF")
+                        to_fade_in.append(outs[v])
+        self.play(*map(FadeIn,to_fade_in))
+        self.wait()
 
-        # self.play(FadeOut(step4a))
-        # self.play(Create(step4b))
-        # self.wait()
+        self.play(FadeOut(step4a))
+        self.play(Create(step4b))
+        self.wait()
 
-        # matched_lines.xor(self.augment([4, 7, 2, 'F_0', 0, 'F_1'], all_lines))
+        matched_lines.xor(self.augment([(4, 7), (2, 7), (2, 'F_1'), (0, 'F_1'), (0, 'F_0')], all_lines))
 
 
-        # self.showOnlyMatched(all_lines, visible, matched_lines)
+        self.showOnlyMatched(all_lines, visible, matched_lines)
