@@ -4,11 +4,6 @@ import random
 import matplotlib.pyplot as plt
 from collections import deque
 
-class fakeset(list):
-    '''Only for debuggings and seeing augmenting paths right'''
-    def add(self,foo):
-        self.append(foo)
-
 def hungarian(inG, left_nodes=None, weight='weight'):
     if left_nodes is None:
         left_nodes = {n for n, d in inG.nodes(data=True) if d['bipartite'] == 0}
@@ -64,14 +59,15 @@ def hungarian(inG, left_nodes=None, weight='weight'):
                 currently_visible.add((u,v))
         print("\nVisible Edges:", currently_visible)
 
-        def augment(visited, u):
+        def augment(visited, u, history):
             if u in visited:
                 return False
             visited.add(u)
             for v, data in G[u].items():
                 if potentials[u] + potentials[v] != data[weight]:
                     continue
-                if v not in matching or augment(visited, matching[v]):
+                history.append((u, v))
+                if v not in matching or augment(visited, matching[v], history):
                     matching[v] = u
                     matching[u] = v
                     return True
@@ -80,39 +76,29 @@ def hungarian(inG, left_nodes=None, weight='weight'):
         print("Before augment matching:",matching)
         # find an unmatched left node
         for u in left_nodes:
-            # visited = set()
-            visited = fakeset()
+            visited = set()
             if u not in matching:
                 old_matching = matching.copy()
-                res = augment(visited, u)
-                # print(old_matching, matching, visited)
-                traversal = []
+                history = []
+                res = augment(visited, u, history)
                 if res:
-                    traversal.append(visited[0])
-                    for v in visited[1:]:
-                        if old_matching.get(v, None) != matching[v]:
-                            traversal.append(old_matching[v])
-                            traversal.append(v)
-                    traversal.append(matching[traversal[-1]])
+                    traversal = []
+                    for x, y in history:
+                        if old_matching.get(x, None) != matching[x] and old_matching.get(y, None) != matching[y]:
+                            traversal.append((x,y))
+                    print("\tAugmented:", traversal)
                 else:
+                    cutset = set()
                     for v in visited:
                         if v not in matching:
-                            traversal.append(v)
+                            cutset.add(v)
                         else:
-                            traversal.append(matching[v])
-                            traversal.append(v)
-                if not res:
-                    print("\tFailed Augment:", traversal)
-                    cutset = set(traversal)
+                            cutset.add(v)
+                            cutset.add(matching[v])
+                    print("\tFailed Augment:", history)
+                    # print('\tHistory:', history)
 
-                    # for v in visited:
-                    #     if v not in matching:
-                    #         cutset.add(v)
-                    #     else:
-                    #         cutset.add(v)
-                    #         cutset.add(matching[v])
                     break
-                print("\tAugmented:", traversal)
         else:
             # we're done
             return matching
