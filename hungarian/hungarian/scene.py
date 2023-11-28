@@ -131,14 +131,12 @@ class Bipartite2(Scene):
         self.wait()
 
         node_transforms = []
-        # copy_left = left_nodes.copy()
         for k,v in left_nodes.submob_dict.items():
             if v.stroke_color != ManimColor('#fc6255'):
                 new_node = v.copy()
                 new_node.stroke_color = '#fc6255'
                 node_transforms.append(Transform(v, new_node))
 
-        # copy_left = left_nodes.copy()
         for k,v in right_node.submob_dict.items():
             if v.stroke_color != ManimColor('#58c4dd'):
                 new_node = v.copy()
@@ -147,7 +145,7 @@ class Bipartite2(Scene):
         self.play(*node_transforms)
 
 
-    def showOnlyMatched(self, all_lines:dict[int, VDict], visible: set, matched_lines:set):
+    def showOnlyMatched(self, all_lines:dict[int, VDict], visible: set, matched_lines: matchinglist):
         to_fade_out = []
         others = []
         for u, outs in all_lines.items():
@@ -341,7 +339,6 @@ class Bipartite2(Scene):
         to_fade_out = self.drawAcrossCutset(all_lines, across)
 
 
-        step4c2 = Tex('$$\\textrm{4c. change} = \min_{x \in S, y \in T}(l(x)+l(y)-w(x,y))$$', font_size=36).align_on_border(DOWN)
         self.play(Succession(FadeOut(step4c), FadeIn(step4c2)))
         self.wait()
         self.wait()
@@ -392,7 +389,6 @@ class Bipartite2(Scene):
         to_fade_out = self.drawAcrossCutset(all_lines, across)
 
 
-        step4c2 = Tex('$$\\textrm{4c. change} = \min_{x \in S, y \in T}(l(x)+l(y)-w(x,y))$$', font_size=36).align_on_border(DOWN)
         self.play(Succession(FadeOut(step4c), FadeIn(step4c2)))
         self.wait()
         self.wait()
@@ -442,7 +438,7 @@ class Bipartite2(Scene):
         to_fade_out = self.drawAcrossCutset(all_lines, across)
 
 
-        step4c2 = Tex('$$\\textrm{4c. change} = \min_{x \in S, y \in T}(l(x)+l(y)-w(x,y))$$', font_size=36).align_on_border(DOWN)
+        # step4c2 = Tex('$$\\textrm{4c. change} = \min_{x \in S, y \in T}(l(x)+l(y)-w(x,y))$$', font_size=36).align_on_border(DOWN)
         self.play(Succession(FadeOut(step4c), FadeIn(step4c2)))
         self.wait()
         self.wait()
@@ -480,3 +476,8 @@ class Bipartite2(Scene):
 
 
         self.showOnlyMatched(all_lines, visible, matched_lines)
+        
+        step4c3 = Text("5. All perfect matching. We're done!", font_size=24).align_on_border(DOWN)
+        self.play(Succession(FadeOut(step4b), FadeIn(step4c3)))
+
+        self.wait(5)
