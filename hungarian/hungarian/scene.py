@@ -91,6 +91,7 @@ class Bipartite2(Scene):
         # failed augmenting path starts on left, terminates somewhere not on left unmatched
                 
         path = []
+        to_remove = []
         cutset_nodes = set()
         for i in range(len(edges_on_path)):
             u,v = edges_on_path[i]
@@ -100,7 +101,14 @@ class Bipartite2(Scene):
             l = lines[u][v]
             nl = l.copy()
             nl.stroke_color = ManimColor('#00FF00')
-            path.append(Transform(l, nl))
+            # path.append(Transform(l, nl))
+
+            if i != 0 and edges_on_path[i-1][1] == v:
+                path.append(GrowFromPoint(nl, l.end))
+            else:
+                path.append(GrowFromPoint(nl, l.start))
+            to_remove.append(nl)
+
         # consider https://docs.manim.community/en/stable/reference/manim.animation.movement.MoveAlongPath.html#manim.animation.movement.MoveAlongPath 
         self.play(Succession(*path))
 
@@ -111,7 +119,9 @@ class Bipartite2(Scene):
             cutset_transform.append(Transform(c,nc))
         # self.play(Indicate(cutset_nodes[-1], scale_factor=1.5))
         self.play(*cutset_transform)
-        # self.wait()
+        self.wait()
+        self.wait()
+        self.play(*map(FadeOut, to_remove))
 
     def drawAcrossCutset(self, all_lines, across):
         to_fade_in = []
@@ -322,7 +332,7 @@ class Bipartite2(Scene):
         old_potentials = potentials
         new_potentials = {0: 1, 1: 8, 2: 3, 3: 4, 4: 6, 5: 2, 6: 0, 7: 0, 'F_0': 0, 'F_1': 0}
         # self.adjustPotentials(old_potentials, new_potentials, potentials_vdict, r, l)
-        self.adjustPotentialsLoud(old_potentials, new_potentials, potentials_vdict, r, l, min(across.values()), speed=0.8)
+        self.adjustPotentialsLoud(old_potentials, new_potentials, potentials_vdict, r, l, min(across.values()), speed=1)
 
         self.play(*map(FadeOut, to_fade_out))
         self.play(FadeOut(caption), FadeOut(step4c2))
@@ -373,7 +383,7 @@ class Bipartite2(Scene):
         old_potentials = new_potentials
         new_potentials = {0: 0, 1: 8, 2: 2, 3: 3, 4: 6, 5: 3, 6: 0, 7: 1, 'F_0': 0, 'F_1': 0}
         # self.adjustPotentials(old_potentials, new_potentials, potentials_vdict, r, l)
-        self.adjustPotentialsLoud(old_potentials, new_potentials, potentials_vdict, r, l, min(across.values()))
+        self.adjustPotentialsLoud(old_potentials, new_potentials, potentials_vdict, r, l, min(across.values()), speed=0.8)
 
         self.play(*map(FadeOut, to_fade_out))
         self.play(FadeOut(caption), FadeOut(step4c2))
@@ -425,7 +435,7 @@ class Bipartite2(Scene):
         old_potentials = new_potentials
         new_potentials = {0: 0, 1: 4, 2: 2, 3: 3, 4: 2, 5: 3, 6: 4, 7: 1, 'F_0': 0, 'F_1': 0}
         # self.adjustPotentials(old_potentials, new_potentials, potentials_vdict, r, l)
-        self.adjustPotentialsLoud(old_potentials, new_potentials, potentials_vdict, r, l, min(across.values()))
+        self.adjustPotentialsLoud(old_potentials, new_potentials, potentials_vdict, r, l, min(across.values()), speed=0.6)
 
         self.play(*map(FadeOut, to_fade_out))
         self.play(FadeOut(caption), FadeOut(step4c2))
@@ -476,7 +486,7 @@ class Bipartite2(Scene):
         old_potentials = new_potentials
         new_potentials = {0: 0, 1: 2, 2: 0, 3: 1, 4: 0, 5: 5, 6: 6, 'F_0': 0, 7: 3, 'F_1': 0}
         # self.adjustPotentials(old_potentials, new_potentials, potentials_vdict, r, l)
-        self.adjustPotentialsLoud(old_potentials, new_potentials, potentials_vdict, r, l, min(across.values()))
+        self.adjustPotentialsLoud(old_potentials, new_potentials, potentials_vdict, r, l, min(across.values()), speed=0.6)
 
         self.play(*map(FadeOut, to_fade_out))
         self.play(FadeOut(caption), FadeOut(step4c2))
