@@ -58,22 +58,29 @@ class Bipartite2(Scene):
                 used_lines.append((u,v))
                 gl = l.copy()
                 gl.stroke_color = ManimColor('#00FF00')
-                green.append(Transform(l, gl))
+
+                green.append(GrowFromPoint(gl, l.start))
+                # green.append(Transform(l, gl))
 
                 nl = l.copy()
                 nl.stroke_color = ManimColor('#FF0000')
-                result.append(Transform(l, nl))
+                # result.append(Transform(l, nl))
+                result.extend((Transform(l, nl), FadeOut(gl)))
+
             else:
                 u,v = edges_on_augmenting_path[i]
                 l = lines[u][v]
                 used_lines.append((u,v))
                 gl = l.copy()
                 gl.stroke_color = ManimColor('#00FF00')
-                green.append(Transform(l, gl))
+                # green.append(Transform(l, gl))
+                green.append(GrowFromPoint(gl, l.end))
+
 
                 nl = l.copy()
-                nl.stroke_color = ManimColor('#000000')
+                nl.stroke_color = ManimColor('#FFFFFF')
                 result.append(Transform(l, nl))
+                result.extend((Transform(l, nl), FadeOut(gl)))
         # consider https://docs.manim.community/en/stable/reference/manim.animation.movement.MoveAlongPath.html#manim.animation.movement.MoveAlongPath 
         self.play(Succession(*green))
         self.play(*result)
@@ -116,35 +123,7 @@ class Bipartite2(Scene):
         self.wait()
         return to_fade_in
 
-    def adjustPotentials(self, old_potentials, new_potentials, potentials_vdict, right_node, left_nodes):
-        new_potentials_vdict = potentials_vdict.copy()
-        potentials_transform = []
-        for k,v in new_potentials.items():
-            if old_potentials[k] == v:
-                continue
-            old = new_potentials_vdict[k]
-            new_potentials_vdict[k] = Text(str(v), font_size=old.font_size).align_to(old, UP).align_to(old,LEFT)
-            a = Succession(Circumscribe(potentials_vdict[k]), Transform(potentials_vdict[k], new_potentials_vdict[k]))
-            potentials_transform.append(a)
-            # no drawing change, prevents extra circles around values
-        self.play(Succession(*potentials_transform))
-        self.wait()
-
-        node_transforms = []
-        for k,v in left_nodes.submob_dict.items():
-            if v.stroke_color != ManimColor('#fc6255'):
-                new_node = v.copy()
-                new_node.stroke_color = '#fc6255'
-                node_transforms.append(Transform(v, new_node))
-
-        for k,v in right_node.submob_dict.items():
-            if v.stroke_color != ManimColor('#58c4dd'):
-                new_node = v.copy()
-                new_node.stroke_color = '#58c4dd'
-                node_transforms.append(Transform(v, new_node))
-        self.play(*node_transforms)
-
-    def adjustPotentialsLoud(self, old_potentials, new_potentials, potentials_vdict, right_node, left_nodes, change_num):
+    def adjustPotentialsLoud(self, old_potentials, new_potentials, potentials_vdict, right_node, left_nodes, change_num, speed=1.0):
         new_potentials_vdict = potentials_vdict.copy()
         l_change, r_change = Text('-'+str(change_num), font_size=20), Text('+'+str(change_num), font_size=20)
 
@@ -155,11 +134,13 @@ class Bipartite2(Scene):
             new_potentials_vdict[k] = Text(str(v), font_size=old.font_size).align_to(old, UP).align_to(old,LEFT)
             if k in left_nodes:
                 c = l_change.copy().next_to(potentials_vdict[k], LEFT)
-                a = Succession(Circumscribe(potentials_vdict[k]), Transform(potentials_vdict[k], new_potentials_vdict[k]), FadeOut(c))
+                # self.remove(c)
+                a = Succession(Indicate(potentials_vdict[k]), CounterclockwiseTransform(potentials_vdict[k], new_potentials_vdict[k]), FadeOut(c), lag_ratio=speed)
             else:
                 c = r_change.copy().next_to(potentials_vdict[k], RIGHT)
-                a = Succession(Circumscribe(potentials_vdict[k]), Transform(potentials_vdict[k], new_potentials_vdict[k]), FadeOut(c))
+                a = Succession(Indicate(potentials_vdict[k]), ClockwiseTransform(potentials_vdict[k], new_potentials_vdict[k]), FadeOut(c), lag_ratio=speed)
             self.play(a)
+            self.remove(c)
 
         self.wait()
 
@@ -194,17 +175,19 @@ class Bipartite2(Scene):
                 nl.stroke_color = ManimColor('#FF0000')
                 back_to_red.append(Transform(l, nl))
         self.play(*map(FadeOut, to_fade_out), *back_to_red)
+        self.add(VGroup(*others))
         self.wait()
 
 
 
     def construct(self):
-        BUFF = 0.6
+        BUFF = 0.5
         OFFSET = 4
+        TEXT_OFFSET = 1
         edges = [(0, 5, {'weight': 3}), (0, 7, {'weight': 1}), (1, 5, {'weight': 4}), (1, 6, {'weight': 8}), (2, 6, {'weight': 1}), (2, 7, {'weight': 3}), (3, 5, {'weight': 6}), (3, 6, {'weight': 2}), (4, 5, {'weight': 5}), (4, 6, {'weight': 6}), (4, 7, {'weight': 3})]
         l,original_r = self.createGraphVDict(edges)
-        l.arrange(UP, buff=BUFF).shift(OFFSET * LEFT)
-        original_r.arrange(UP, buff=BUFF).shift(OFFSET * RIGHT)
+        l.arrange(UP, buff=BUFF).shift(OFFSET * LEFT).shift(UP*0.5)
+        original_r.arrange(UP, buff=BUFF).shift(OFFSET * RIGHT).shift(UP*0.5)
         lines = self.createGraphEdges(edges, l, original_r)
 
         self.play(Write(Text('Maximum Weighted Bipartite Matching', font_size=36).align_on_border(UP)))
@@ -213,7 +196,7 @@ class Bipartite2(Scene):
 
         fake_edges = [(0, 'F_1', {'weight': 0}), (0, 6, {'weight': 0}), (0, 'F_0', {'weight': 0}), (1, 'F_1', {'weight': 0}), (1, 7, {'weight': 0}), (1, 'F_0', {'weight': 0}), (2, 'F_1', {'weight': 0}), (2, 5, {'weight': 0}), (2, 'F_0', {'weight': 0}), (3, 'F_1', {'weight': 0}), (3, 7, {'weight': 0}), (3, 'F_0', {'weight': 0}), (4, 'F_1', {'weight': 0}), (4, 'F_0', {'weight': 0})]
         r = self.updateNodes(fake_edges, original_r)
-        r.arrange(UP, buff=BUFF).shift(OFFSET * RIGHT)
+        r.arrange(UP, buff=BUFF).shift(OFFSET * RIGHT).shift(UP*0.5)
         # self.play(Transform(original_r, r))
         
         all_lines = self.createGraphEdges(edges, l, r)
@@ -225,7 +208,7 @@ class Bipartite2(Scene):
         transform_line_pairs = ((lines[x], all_lines[x]) for x in lines.keys())
         transform_right_pairs = [(original_r[x], r[x]) for x in original_r.submob_dict.keys()]
         fade_in_right = [r[x] for x in r.submob_dict.keys() if x not in original_r]
-        step1 = Text('1. Add fake nodes to allow perfect matching.', font_size=24).align_on_border(DOWN)
+        step1 = Text('1. Add fake nodes to allow perfect matching.', font_size=24).align_on_border(DOWN, TEXT_OFFSET)
         self.play(Create(step1))
         self.wait()
 
@@ -242,10 +225,10 @@ class Bipartite2(Scene):
 
 
 
-        step2 = Text('2. Add fake edges (with weight < min(edge weight)) to make a complete graph.', font_size=24).align_on_border(DOWN)
+        step2 = Text('2. Add fake edges (with weight < min(edge weight)) to make a complete graph.', font_size=24).align_on_border(DOWN, 1)
         self.play(Create(step2))
         self.wait()
-        step2a = Text("Here, we'll use weight 0 and use dotted lines.", font_size=24).align_on_border(DOWN)
+        step2a = Text("Here, we'll use weight 0 and use dotted lines.", font_size=24).align_on_border(DOWN, TEXT_OFFSET)
         self.play(FadeIn(step2a), step2.animate().shift(0.5*UP))
         self.wait()
 
@@ -264,7 +247,7 @@ class Bipartite2(Scene):
         self.wait()
 
         self.play(FadeOut(step2), FadeOut(step2a))
-        step3 = Text('3. Assign potentials based on max outgoing weight.', font_size=24).align_on_border(DOWN)
+        step3 = Text('3. Assign potentials based on max outgoing weight.', font_size=24).align_on_border(DOWN, TEXT_OFFSET)
         self.play(Create(step3))
         self.wait()
 
@@ -285,7 +268,7 @@ class Bipartite2(Scene):
         self.play(FadeOut(step3))
 
 
-        step4a = Tex('4a. Only show edges s.t. $l(x) + l(y) = w(e)$', font_size=36).align_on_border(DOWN)
+        step4a = Tex('4a. Only show edges s.t. $l(x) + l(y) = w(e)$', font_size=36).align_on_border(DOWN, TEXT_OFFSET)
         self.play(Create(step4a))
         self.wait()
 
@@ -301,7 +284,7 @@ class Bipartite2(Scene):
 
         self.play(FadeOut(step4a))
 
-        step4b = Text('4b. Run standard Augmenting Path algorithm', font_size=24).align_on_border(DOWN)
+        step4b = Text('4b. Run standard Augmenting Path algorithm', font_size=24).align_on_border(DOWN, TEXT_OFFSET)
         self.play(Create(step4b))
         self.wait()
 
@@ -309,15 +292,15 @@ class Bipartite2(Scene):
         matched_lines.xor(self.augment([(0,5)], all_lines))
         matched_lines.xor(self.augment([(1,6)], all_lines))
         matched_lines.xor(self.augment([(2,7)], all_lines))
-
+        
         self.failedAugment([(3, 5), (0, 5)], all_lines, l, r)
-        step4b2 = Text('4b. Augmenting Path Stuck, but not all nodes matched', font_size=24).align_on_border(DOWN)
+        step4b2 = Text('4b. Augmenting Path Stuck, but not all nodes matched', font_size=24).align_on_border(DOWN, TEXT_OFFSET)
         
         self.play(Succession(FadeOut(step4b),FadeIn(step4b2)))
         self.wait()
         self.wait()
 
-        step4c = Text('4c. Adjust potentials across left visited nodes and right unvisited.', font_size=24).align_on_border(DOWN)
+        step4c = Text('4c. Adjust potentials across left visited nodes and right unvisited.', font_size=24).align_on_border(DOWN, TEXT_OFFSET)
         self.play(Succession(FadeOut(step4b2), FadeIn(step4c)))
 
 
@@ -327,11 +310,11 @@ class Bipartite2(Scene):
         across = {(0, 7): 2, (0, 'F_0'): 3, (0, 6): 3, (0, 'F_1'): 3, (3, 6): 4, (3, 'F_0'): 6, (3, 7): 6, (3, 'F_1'): 6}
         to_fade_out = self.drawAcrossCutset(all_lines, across)
 
-        step4c2 = Tex('$$\\textrm{4c. change} = \min_{x \in S, y \in T}(l(x)+l(y)-w(x,y))$$', font_size=36).align_on_border(DOWN)
+        step4c2 = Tex('$$\\textrm{4c. change} = \min_{x \in S, y \in T}(l(x)+l(y)-w(x,y))$$', font_size=36).align_on_border(DOWN, TEXT_OFFSET)
         self.play(Succession(FadeOut(step4c), FadeIn(step4c2)))
         self.wait()
         self.wait()
-        caption = Tex(f"$= \min({','.join(map(str, across.values()))}) = {min(across.values())}$", font_size=36).align_on_border(DOWN)
+        caption = Tex(f"$= \min({','.join(map(str, across.values()))}) = {min(across.values())}$", font_size=36).align_on_border(DOWN, TEXT_OFFSET)
         # self.play(Succession(FadeOut(step4c2), FadeIn(caption)))
         self.play(FadeIn(caption), step4c2.animate().shift(0.5*UP))
         self.wait()
@@ -339,7 +322,7 @@ class Bipartite2(Scene):
         old_potentials = potentials
         new_potentials = {0: 1, 1: 8, 2: 3, 3: 4, 4: 6, 5: 2, 6: 0, 7: 0, 'F_0': 0, 'F_1': 0}
         # self.adjustPotentials(old_potentials, new_potentials, potentials_vdict, r, l)
-        self.adjustPotentialsLoud(old_potentials, new_potentials, potentials_vdict, r, l, min(across.values()))
+        self.adjustPotentialsLoud(old_potentials, new_potentials, potentials_vdict, r, l, min(across.values()), speed=0.8)
 
         self.play(*map(FadeOut, to_fade_out))
         self.play(FadeOut(caption), FadeOut(step4c2))
@@ -352,10 +335,11 @@ class Bipartite2(Scene):
         to_fade_in = []
         for u, outs in all_lines.items():
             for v in outs.submob_dict.keys():
-                if (u,v) in visible:
-                    if outs[v].stroke_color != ManimColor("#FF0000"):
-                        outs[v].stroke_color = ManimColor("#FFFFFF")
-                        to_fade_in.append(outs[v])
+                # if (u,v) in visible:
+                if (u,v) in visible and (u,v) not in matched_lines:
+                    # if outs[v].stroke_color != ManimColor("#FF0000"):
+                    outs[v].stroke_color = ManimColor("#FFFFFF")
+                    to_fade_in.append(outs[v])
         self.play(*map(FadeIn,to_fade_in))
         self.wait()
 
@@ -382,7 +366,7 @@ class Bipartite2(Scene):
         self.play(Succession(FadeOut(step4c), FadeIn(step4c2.shift(0.5*DOWN))))
         self.wait()
         self.wait()
-        caption = Tex(f"$= \min({','.join(map(str, across.values()))}) = {min(across.values())}$", font_size=36).align_on_border(DOWN)
+        caption = Tex(f"$= \min({','.join(map(str, across.values()))}) = {min(across.values())}$", font_size=36).align_on_border(DOWN, TEXT_OFFSET)
         self.play(FadeIn(caption), step4c2.animate().shift(0.5*UP))
         self.wait()
 
@@ -402,10 +386,11 @@ class Bipartite2(Scene):
         to_fade_in = []
         for u, outs in all_lines.items():
             for v in outs.submob_dict.keys():
-                if (u,v) in visible:
-                    if outs[v].stroke_color != ManimColor("#FF0000"):
-                        outs[v].stroke_color = ManimColor("#FFFFFF")
-                        to_fade_in.append(outs[v])
+                # if (u,v) in visible:
+                if (u,v) in visible and (u,v) not in matched_lines:
+                    # if outs[v].stroke_color != ManimColor("#FF0000"):
+                    outs[v].stroke_color = ManimColor("#FFFFFF")
+                    to_fade_in.append(outs[v])
         self.play(*map(FadeIn,to_fade_in))
         self.wait()
 
@@ -433,7 +418,7 @@ class Bipartite2(Scene):
         self.play(Succession(FadeOut(step4c), FadeIn(step4c2.shift(0.5*DOWN))))
         self.wait()
         self.wait()
-        caption = Tex(f"$= \min({','.join(map(str, across.values()))}) = {min(across.values())}$", font_size=36).align_on_border(DOWN)
+        caption = Tex(f"$= \min({','.join(map(str, across.values()))}) = {min(across.values())}$", font_size=36).align_on_border(DOWN, TEXT_OFFSET)
         self.play(FadeIn(caption), step4c2.animate().shift(0.5*UP))
         self.wait()
 
@@ -484,7 +469,7 @@ class Bipartite2(Scene):
         self.play(Succession(FadeOut(step4c), FadeIn(step4c2.shift(0.5*DOWN))))
         self.wait()
         self.wait()
-        caption = Tex(f"$= \min({','.join(map(str, across.values()))}) = {min(across.values())}$", font_size=36).align_on_border(DOWN)
+        caption = Tex(f"$= \min({','.join(map(str, across.values()))}) = {min(across.values())}$", font_size=36).align_on_border(DOWN, TEXT_OFFSET)
         self.play(FadeIn(caption), step4c2.animate().shift(0.5*UP))
         self.wait()
 
@@ -504,10 +489,11 @@ class Bipartite2(Scene):
         to_fade_in = []
         for u, outs in all_lines.items():
             for v in outs.submob_dict.keys():
-                if (u,v) in visible:
-                    if outs[v].stroke_color != ManimColor("#FF0000"):
-                        outs[v].stroke_color = ManimColor("#FFFFFF")
-                        to_fade_in.append(outs[v])
+                if (u,v) in visible and (u,v) not in matched_lines:
+                    # if outs[v].stroke_color != ManimColor("#FF0000"):
+                    outs[v].stroke_color = ManimColor("#FFFFFF")
+                    to_fade_in.append(outs[v])
+
         self.play(*map(FadeIn,to_fade_in))
         self.wait()
 
@@ -520,7 +506,7 @@ class Bipartite2(Scene):
 
         self.showOnlyMatched(all_lines, visible, matched_lines)
         
-        step4c3 = Text("5. All perfect matching. We're done!", font_size=24).align_on_border(DOWN)
+        step4c3 = Text("5. All perfect matching. We're done!", font_size=24).align_on_border(DOWN, TEXT_OFFSET)
         self.play(Succession(FadeOut(step4b), FadeIn(step4c3)))
 
         self.wait(5)
