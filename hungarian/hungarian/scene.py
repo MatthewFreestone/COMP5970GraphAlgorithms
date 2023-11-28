@@ -144,6 +144,38 @@ class Bipartite2(Scene):
                 node_transforms.append(Transform(v, new_node))
         self.play(*node_transforms)
 
+    def adjustPotentialsLoud(self, old_potentials, new_potentials, potentials_vdict, right_node, left_nodes, change_num):
+        new_potentials_vdict = potentials_vdict.copy()
+        l_change, r_change = Text('-'+str(change_num), font_size=20), Text('+'+str(change_num), font_size=20)
+
+        for k,v in new_potentials.items():
+            if old_potentials[k] == v:
+                continue
+            old = new_potentials_vdict[k]
+            new_potentials_vdict[k] = Text(str(v), font_size=old.font_size).align_to(old, UP).align_to(old,LEFT)
+            if k in left_nodes:
+                c = l_change.copy().next_to(potentials_vdict[k], LEFT)
+                a = Succession(Circumscribe(potentials_vdict[k]), Transform(potentials_vdict[k], new_potentials_vdict[k]), FadeOut(c))
+            else:
+                c = r_change.copy().next_to(potentials_vdict[k], RIGHT)
+                a = Succession(Circumscribe(potentials_vdict[k]), Transform(potentials_vdict[k], new_potentials_vdict[k]), FadeOut(c))
+            self.play(a)
+
+        self.wait()
+
+        node_transforms = []
+        for k,v in left_nodes.submob_dict.items():
+            if v.stroke_color != ManimColor('#fc6255'):
+                new_node = v.copy()
+                new_node.stroke_color = '#fc6255'
+                node_transforms.append(Transform(v, new_node))
+
+        for k,v in right_node.submob_dict.items():
+            if v.stroke_color != ManimColor('#58c4dd'):
+                new_node = v.copy()
+                new_node.stroke_color = '#58c4dd'
+                node_transforms.append(Transform(v, new_node))
+        self.play(*node_transforms)
 
     def showOnlyMatched(self, all_lines:dict[int, VDict], visible: set, matched_lines: matchinglist):
         to_fade_out = []
@@ -207,8 +239,14 @@ class Bipartite2(Scene):
 
         
         
+
+
+
         step2 = Text('2. Add fake edges (with weight < min(edge weight)) to make a complete graph.', font_size=24).align_on_border(DOWN)
         self.play(Create(step2))
+        self.wait()
+        step2a = Text("Here, we'll use weight 0 and use dotted lines.", font_size=24).align_on_border(DOWN)
+        self.play(FadeIn(step2a), step2.animate().shift(0.5*UP))
         self.wait()
 
         self.play(Succession(*map(FadeIn, fake_lines.values()), lag_ratio=0.8))
@@ -223,8 +261,9 @@ class Bipartite2(Scene):
         # self.remove(*all_lines.values())
 
         self.wait()
+        self.wait()
 
-        self.play(FadeOut(step2))
+        self.play(FadeOut(step2), FadeOut(step2a))
         step3 = Text('3. Assign potentials based on max outgoing weight.', font_size=24).align_on_border(DOWN)
         self.play(Create(step3))
         self.wait()
@@ -299,7 +338,8 @@ class Bipartite2(Scene):
 
         old_potentials = potentials
         new_potentials = {0: 1, 1: 8, 2: 3, 3: 4, 4: 6, 5: 2, 6: 0, 7: 0, 'F_0': 0, 'F_1': 0}
-        self.adjustPotentials(old_potentials, new_potentials, potentials_vdict, r, l)
+        # self.adjustPotentials(old_potentials, new_potentials, potentials_vdict, r, l)
+        self.adjustPotentialsLoud(old_potentials, new_potentials, potentials_vdict, r, l, min(across.values()))
 
         self.play(*map(FadeOut, to_fade_out))
         self.play(FadeOut(caption), FadeOut(step4c2))
@@ -339,7 +379,7 @@ class Bipartite2(Scene):
         to_fade_out = self.drawAcrossCutset(all_lines, across)
 
 
-        self.play(Succession(FadeOut(step4c), FadeIn(step4c2)))
+        self.play(Succession(FadeOut(step4c), FadeIn(step4c2.shift(0.5*DOWN))))
         self.wait()
         self.wait()
         caption = Tex(f"$= \min({','.join(map(str, across.values()))}) = {min(across.values())}$", font_size=36).align_on_border(DOWN)
@@ -348,7 +388,8 @@ class Bipartite2(Scene):
 
         old_potentials = new_potentials
         new_potentials = {0: 0, 1: 8, 2: 2, 3: 3, 4: 6, 5: 3, 6: 0, 7: 1, 'F_0': 0, 'F_1': 0}
-        self.adjustPotentials(old_potentials, new_potentials, potentials_vdict, r, l)
+        # self.adjustPotentials(old_potentials, new_potentials, potentials_vdict, r, l)
+        self.adjustPotentialsLoud(old_potentials, new_potentials, potentials_vdict, r, l, min(across.values()))
 
         self.play(*map(FadeOut, to_fade_out))
         self.play(FadeOut(caption), FadeOut(step4c2))
@@ -389,7 +430,7 @@ class Bipartite2(Scene):
         to_fade_out = self.drawAcrossCutset(all_lines, across)
 
 
-        self.play(Succession(FadeOut(step4c), FadeIn(step4c2)))
+        self.play(Succession(FadeOut(step4c), FadeIn(step4c2.shift(0.5*DOWN))))
         self.wait()
         self.wait()
         caption = Tex(f"$= \min({','.join(map(str, across.values()))}) = {min(across.values())}$", font_size=36).align_on_border(DOWN)
@@ -398,7 +439,8 @@ class Bipartite2(Scene):
 
         old_potentials = new_potentials
         new_potentials = {0: 0, 1: 4, 2: 2, 3: 3, 4: 2, 5: 3, 6: 4, 7: 1, 'F_0': 0, 'F_1': 0}
-        self.adjustPotentials(old_potentials, new_potentials, potentials_vdict, r, l)
+        # self.adjustPotentials(old_potentials, new_potentials, potentials_vdict, r, l)
+        self.adjustPotentialsLoud(old_potentials, new_potentials, potentials_vdict, r, l, min(across.values()))
 
         self.play(*map(FadeOut, to_fade_out))
         self.play(FadeOut(caption), FadeOut(step4c2))
@@ -439,7 +481,7 @@ class Bipartite2(Scene):
 
 
         # step4c2 = Tex('$$\\textrm{4c. change} = \min_{x \in S, y \in T}(l(x)+l(y)-w(x,y))$$', font_size=36).align_on_border(DOWN)
-        self.play(Succession(FadeOut(step4c), FadeIn(step4c2)))
+        self.play(Succession(FadeOut(step4c), FadeIn(step4c2.shift(0.5*DOWN))))
         self.wait()
         self.wait()
         caption = Tex(f"$= \min({','.join(map(str, across.values()))}) = {min(across.values())}$", font_size=36).align_on_border(DOWN)
@@ -448,7 +490,8 @@ class Bipartite2(Scene):
 
         old_potentials = new_potentials
         new_potentials = {0: 0, 1: 2, 2: 0, 3: 1, 4: 0, 5: 5, 6: 6, 'F_0': 0, 7: 3, 'F_1': 0}
-        self.adjustPotentials(old_potentials, new_potentials, potentials_vdict, r, l)
+        # self.adjustPotentials(old_potentials, new_potentials, potentials_vdict, r, l)
+        self.adjustPotentialsLoud(old_potentials, new_potentials, potentials_vdict, r, l, min(across.values()))
 
         self.play(*map(FadeOut, to_fade_out))
         self.play(FadeOut(caption), FadeOut(step4c2))
